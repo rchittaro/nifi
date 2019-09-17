@@ -22,12 +22,11 @@ import org.apache.nifi.serialization.record.RecordField;
 import org.apache.nifi.serialization.record.RecordSchema;
 import org.apache.nifi.serialization.record.SchemaIdentifier;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import javax.xml.bind.DatatypeConverter;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -40,6 +39,7 @@ public class SimpleRecordSchema implements RecordSchema {
     private final SchemaIdentifier schemaIdentifier;
     private String schemaName;
     private String schemaNamespace;
+    private String digestString = null;
     private volatile int hashCode;
 
     public SimpleRecordSchema(final List<RecordField> fields) {
@@ -83,7 +83,6 @@ public class SimpleRecordSchema implements RecordSchema {
         }
     }
 
-
     @Override
     public Optional<String> getSchemaFormat() {
         return Optional.ofNullable(schemaFormat);
@@ -99,6 +98,7 @@ public class SimpleRecordSchema implements RecordSchema {
             throw new IllegalArgumentException("Fields have already been set.");
         }
 
+        this.digestString = null;
         this.fields = Collections.unmodifiableList(new ArrayList<>(fields));
         this.fieldMap = new HashMap<>(fields.size() * 2);
 
@@ -116,6 +116,34 @@ public class SimpleRecordSchema implements RecordSchema {
             }
         }
     }
+
+    public Optional<String> getSchemaDigest() {
+        if(this.fields == null) {
+            this.digestString = null;
+            Optional.ofNullable(this.digestString);
+        }
+
+        if(this.digestString != null) {
+            Optional.ofNullable(this.digestString);
+        }
+
+        ByteBuffer fieldBytes = ByteBuffer.allocate(4);
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            for (final RecordField field : fields) {
+                int fieldHash = field.hashCode();
+                fieldBytes.putInt(fieldHash);
+                md.update(fieldBytes.array());
+                fieldBytes.clear();
+            }
+            this.digestString = DatatypeConverter.printHexBinary(md.digest());
+
+        } catch (NoSuchAlgorithmException e) {
+            this.digestString = null;
+        }
+        return Optional.ofNullable(this.digestString);
+    }
+
 
     @Override
     public int getFieldCount() {
@@ -166,8 +194,12 @@ public class SimpleRecordSchema implements RecordSchema {
             return false;
         }
 
-        final RecordSchema other = (RecordSchema) obj;
-        return fields.equals(other.getFields());
+        RecordSchema other = (RecordSchema) obj;
+
+        // Field objects can be self referential and thus result in
+        // infinite recursion, use schema digest for equivalency
+        return (Objects.equals(this.getSchemaDigest().get(), other.getSchemaDigest().get()));
+
     }
 
     @Override

@@ -73,22 +73,147 @@ public class TestSimpleRecordSchema {
 
     @Test
     public void testHashCodeAndEqualsWithSelfReferencingSchema() {
-        final SimpleRecordSchema schema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+        {
+            final SimpleRecordSchema schema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            final List<RecordField> personFields = new ArrayList<>();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("sibling", RecordFieldType.RECORD.getRecordDataType(schema)));
+            schema.setFields(personFields);
 
-        final List<RecordField> personFields = new ArrayList<>();
-        personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
-        personFields.add(new RecordField("sibling", RecordFieldType.RECORD.getRecordDataType(schema)));
+            schema.hashCode();
+            assertTrue(schema.equals(schema));
 
-        schema.setFields(personFields);
+            final SimpleRecordSchema secondSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            secondSchema.setFields(personFields);
+            assertTrue(schema.equals(secondSchema));
+            assertTrue(secondSchema.equals(schema));
+        }
 
-        schema.hashCode();
-        assertTrue(schema.equals(schema));
+        {
+            final SimpleRecordSchema personSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            final List<RecordField> personFields = new ArrayList<>();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(personSchema)));
+            personSchema.setFields(personFields);
 
-        final SimpleRecordSchema secondSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
-        secondSchema.setFields(personFields);
-        assertTrue(schema.equals(secondSchema));
-        assertTrue(secondSchema.equals(schema));
+            // Set up second schema making sure there are no shared references between schemas
+            SimpleRecordSchema secondSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            personFields.clear();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(secondSchema)));
+            secondSchema.setFields(personFields);
+
+            assertTrue(personSchema.equals(secondSchema));
+        }
     }
+
+
+
+    @Test
+    public void testSchemaNotEqualsCompareSelfRef() {
+
+        // Test#1 : Field name differs (SIN vs. OAS)
+        //
+        {
+            final SimpleRecordSchema personSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            final List<RecordField> personFields = new ArrayList<>();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("OAS", RecordFieldType.STRING.getDataType())); // Different Name
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(personSchema)));
+            personSchema.setFields(personFields);
+
+            // Set up second schema making sure there are no shared references between schemas
+            SimpleRecordSchema secondSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            personFields.clear();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(secondSchema)));
+            secondSchema.setFields(personFields);
+
+            assertTrue(!personSchema.equals(secondSchema));
+            assertTrue(!secondSchema.equals(personSchema));
+        }
+
+        // Test#2 - All field names the same, one type is different
+        {
+            final SimpleRecordSchema personSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            final List<RecordField> personFields = new ArrayList<>();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.INT.getDataType())); // Different Type
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(personSchema)));
+            personSchema.setFields(personFields);
+
+            // Set up second schema making sure there are no shared references between schemas
+            SimpleRecordSchema secondSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            personFields.clear();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(secondSchema)));
+            secondSchema.setFields(personFields);
+
+            assertTrue(!personSchema.equals(secondSchema));
+            assertTrue(!secondSchema.equals(personSchema));
+        }
+
+
+        // Test#3 - Add an additional simple Record Field in one schema
+        {
+            final SimpleRecordSchema personSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            final List<RecordField> personFields = new ArrayList<>();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("Birthday", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(personSchema)));
+            personSchema.setFields(personFields);
+
+            // Set up second schema making sure there are no shared references between schemas
+            SimpleRecordSchema secondSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            personFields.clear();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(secondSchema)));
+            secondSchema.setFields(personFields);
+
+            assertTrue(!personSchema.equals(secondSchema));
+            assertTrue(!secondSchema.equals(personSchema));
+        }
+
+        // Test#4 - Add an additional Record type Record Field in one schema
+        {
+            final SimpleRecordSchema personSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            final List<RecordField> personFields = new ArrayList<>();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("Birthday", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(personSchema)));
+            personFields.add(new RecordField("PersonalData2", RecordFieldType.RECORD.getRecordDataType(personSchema)));
+            personSchema.setFields(personFields);
+
+            // Set up second schema making sure there are no shared references between schemas
+            SimpleRecordSchema secondSchema = new SimpleRecordSchema(SchemaIdentifier.EMPTY);
+            personFields.clear();
+            personFields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("address", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("SIN", RecordFieldType.STRING.getDataType()));
+            personFields.add(new RecordField("PersonalData", RecordFieldType.RECORD.getRecordDataType(secondSchema)));
+            secondSchema.setFields(personFields);
+
+            assertTrue(!personSchema.equals(secondSchema));
+            assertTrue(!secondSchema.equals(personSchema));
+        }
+    }
+
 
     private Set<String> set(final String... values) {
         final Set<String> set = new HashSet<>();

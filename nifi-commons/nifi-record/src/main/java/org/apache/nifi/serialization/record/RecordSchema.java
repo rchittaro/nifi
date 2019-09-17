@@ -87,4 +87,9 @@ public interface RecordSchema {
      */
     Optional<String> getSchemaNamespace();
 
+    /**
+     *
+     * @return a unique digest of the schema
+     */
+    Optional<String> getSchemaDigest();
 }
